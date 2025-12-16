@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠打刻 - 改善版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --font-size-multiplier: 1;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f7;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border-color: #e0e0e0;
+        }
+
+        /* ハイコントラストモード */
+        body.high-contrast {
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --text-tertiary: #999999;
+            --border-color: #444444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px 30px;
+            max-width: 400px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        /* アクセシビリティツールバー */
+        .accessibility-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toolbar-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: calc(11px * var(--font-size-multiplier));
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+        }
+
+        .toolbar-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .toolbar-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: var(--text-primary);
+            font-size: calc(24px * var(--font-size-multiplier));
+            margin-bottom: 10px;
+        }
+
+        /* モード切り替え */
+        .mode-toggle {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: calc(14px * var(--font-size-multiplier));
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .mode-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body.high-contrast .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .current-time {
+            font-size: calc(36px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        body.simple-mode .current-time {
+            font-size: calc(48px * var(--font-size-multiplier));
+        }
+
+        .current-date {
+            font-size: calc(14px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* 詳細情報（詳細モードのみ） */
+        .detail-section {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        body.simple-mode .detail-section {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .work-status {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .work-status-title {
+            font-size: calc(12px * var(--font-size-multiplier));
+            color: var(--text-tertiary);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .work-hours {
+            font-size: calc(40px * var(--font-size-multiplier));
+            font-weight: bold;
+            text-align: center;
+            background: var(--bg-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+
+        .work-progress {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .work-progress-bar {
+            height: 100%;
+            background: var(--bg-gradient);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .work-details {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .work-detail-item {
+            text-align: center;
+        }
+
+        .work-detail-label {
+            font-size: calc(11px * var(--font-size-multiplier));
+            color: var(--text-tertiary);
+            margin-bottom: 5px;
+        }
+
+        .work-detail-value {
+            font-size: calc(14px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: #667eea;
+        }
+
+        .info-card-title {
+            font-size: calc(12px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .info-card-value {
+            font-size: calc(24px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        /* ボタングループ */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        body.simple-mode .button-group {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: calc(16px * var(--font-size-multiplier));
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        body.simple-mode .btn {
+            padding: 30px;
+            font-size: calc(22px * var(--font-size-multiplier));
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-clock-in {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-clock-in:hover {
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-clock-in:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-clock-out {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-clock-out:hover {
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-clock-out:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 週次カレンダー（折りたたみ可能） */
+        .week-calendar {
+            margin-bottom: 20px;
+        }
+
+        .week-calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 10px;
+        }
+
+        .week-calendar-header:hover {
+            background: #e0e0e0;
+        }
+
+        .week-calendar-title {
+            font-size: calc(14px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .week-calendar-toggle {
+            font-size: calc(12px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+        }
+
+        .week-calendar-content {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .week-calendar-content.expanded {
+            max-height: 200px;
+            opacity: 1;
+            margin-bottom: 10px;
+        }
+
+        .week-day {
+            text-align: center;
+            padding: 10px 5px;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        body.high-contrast .week-day {
+            background: #2a2a2a;
+        }
+
+        .week-day.today {
+            background: var(--bg-gradient);
+            color: white;
+        }
+
+        .week-day.has-work {
+            background: #e8f5e9;
+        }
+
+        body.high-contrast .week-day.has-work {
+            background: #1b5e20;
+        }
+
+        .week-day-name {
+            font-size: calc(10px * var(--font-size-multiplier));
+            color: var(--text-tertiary);
+            margin-bottom: 5px;
+        }
+
+        .week-day.today .week-day-name {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .week-day-date {
+            font-size: calc(14px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .week-day.today .week-day-date {
+            color: white;
+        }
+
+        .week-day-hours {
+            font-size: calc(9px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        .week-day.today .week-day-hours {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* ヒストリー */
+        .history {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .history-title {
+            font-size: calc(14px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-label {
+            font-size: calc(13px * var(--font-size-multiplier));
+            color: var(--text-secondary);
+        }
+
+        .history-time {
+            font-size: calc(13px * var(--font-size-multiplier));
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        /* トースト */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            font-size: calc(14px * var(--font-size-multiplier));
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 360px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- アクセシビリティツールバー -->
+        <div class="accessibility-toolbar">
+            <button class="toolbar-btn" onclick="changeFontSize('small')" title="小さい文字">A</button>
+            <button class="toolbar-btn active" onclick="changeFontSize('medium')" title="標準文字">A</button>
+            <button class="toolbar-btn" onclick="changeFontSize('large')" title="大きい文字">A</button>
+            <button class="toolbar-btn" onclick="toggleHighContrast()" title="ハイコントラスト">◐</button>
+        </div>
+
+        <div class="header">
+            <h1>勤怠打刻</h1>
+        </div>
+
+        <!-- モード切り替え -->
+        <div class="mode-toggle">
+            <button class="mode-btn" id="simpleModeBtn" onclick="setMode('simple')">シンプル</button>
+            <button class="mode-btn active" id="detailModeBtn" onclick="setMode('detail')">詳細</button>
+        </div>
+
+        <div class="current-time" id="currentTime">--:--:--</div>
+        <div class="current-date" id="currentDate">----年--月--日（-）</div>
+
+        <!-- 勤務状況（詳細モードのみ） -->
+        <div class="detail-section">
+            <div class="work-status">
+                <div class="work-status-title">本日の勤務時間</div>
+                <div class="work-hours" id="workHours">0:00:00</div>
+                <div class="work-progress">
+                    <div class="work-progress-bar" id="workProgressBar" style="width: 0%"></div>
+                </div>
+                <div class="work-details">
+                    <div class="work-detail-item">
+                        <div class="work-detail-label">出勤</div>
+                        <div class="work-detail-value" id="clockInTime">--:--</div>
+                    </div>
+                    <div class="work-detail-item">
+                        <div class="work-detail-label">退勤</div>
+                        <div class="work-detail-value" id="clockOutTime">--:--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-cards">
+                <div class="info-card">
+                    <div class="info-card-title">今月の勤務日数</div>
+                    <div class="info-card-value" id="workDays">0日</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-title">今月の総勤務時間</div>
+                    <div class="info-card-value" id="totalHours">0h</div>
+                </div>
+            </div>
+
+            <!-- 週次カレンダー -->
+            <div class="week-calendar">
+                <div class="week-calendar-header" onclick="toggleWeekCalendar()">
+                    <span class="week-calendar-title">今週の勤務</span>
+                    <span class="week-calendar-toggle" id="weekCalendarToggle">▼ 表示</span>
+                </div>
+                <div class="week-calendar-content" id="weekCalendarContent">
+                    <!-- 動的に生成 -->
+                </div>
+            </div>
+
+            <div class="history">
+                <div class="history-title">本日の打刻履歴</div>
+                <div id="historyList">
+                    <div style="text-align: center; color: var(--text-tertiary); padding: 20px 0;">打刻履歴がありません</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ボタングループ -->
+        <div class="button-group">
+            <button class="btn btn-clock-in" id="btnClockIn" onclick="clockIn()">
+                出勤
+            </button>
+            <button class="btn btn-clock-out" id="btnClockOut" onclick="clockOut()" disabled>
+                退勤
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let workStartTime = null;
+        let workEndTime = null;
+        let updateInterval = null;
+        let weekCalendarExpanded = false;
+
+        // 設定の読み込み
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('settings') || '{}');
+
+            // フォントサイズ
+            if (settings.fontSize) {
+                changeFontSize(settings.fontSize, false);
+            }
+
+            // ハイコントラスト
+            if (settings.highContrast) {
+                document.body.classList.add('high-contrast');
+            }
+
+            // モード
+            if (settings.mode) {
+                setMode(settings.mode, false);
+            }
+        }
+
+        // 設定の保存
+        function saveSettings() {
+            const settings = {
+                fontSize: document.documentElement.style.getPropertyValue('--font-size-multiplier') === '0.9' ? 'small' :
+                          document.documentElement.style.getPropertyValue('--font-size-multiplier') === '1.15' ? 'large' : 'medium',
+                highContrast: document.body.classList.contains('high-contrast'),
+                mode: document.body.classList.contains('simple-mode') ? 'simple' : 'detail'
+            };
+            localStorage.setItem('settings', JSON.stringify(settings));
+        }
+
+        // フォントサイズ変更
+        function changeFontSize(size, save = true) {
+            const buttons = document.querySelectorAll('.accessibility-toolbar .toolbar-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            if (size === 'small') {
+                document.documentElement.style.setProperty('--font-size-multiplier', '0.9');
+                buttons[0].classList.add('active');
+            } else if (size === 'large') {
+                document.documentElement.style.setProperty('--font-size-multiplier', '1.15');
+                buttons[2].classList.add('active');
+            } else {
+                document.documentElement.style.setProperty('--font-size-multiplier', '1');
+                buttons[1].classList.add('active');
+            }
+
+            if (save) saveSettings();
+        }
+
+        // ハイコントラスト切り替え
+        function toggleHighContrast() {
+            document.body.classList.toggle('high-contrast');
+            saveSettings();
+        }
+
+        // モード切り替え
+        function setMode(mode, save = true) {
+            const simpleModeBtn = document.getElementById('simpleModeBtn');
+            const detailModeBtn = document.getElementById('detailModeBtn');
+
+            if (mode === 'simple') {
+                document.body.classList.add('simple-mode');
+                simpleModeBtn.classList.add('active');
+                detailModeBtn.classList.remove('active');
+            } else {
+                document.body.classList.remove('simple-mode');
+                simpleModeBtn.classList.remove('active');
+                detailModeBtn.classList.add('active');
+            }
+
+            if (save) saveSettings();
+        }
+
+        // 週次カレンダー切り替え
+        function toggleWeekCalendar() {
+            weekCalendarExpanded = !weekCalendarExpanded;
+            const content = document.getElementById('weekCalendarContent');
+            const toggle = document.getElementById('weekCalendarToggle');
+
+            if (weekCalendarExpanded) {
+                content.classList.add('expanded');
+                toggle.textContent = '▲ 非表示';
+                renderWeekCalendar();
+            } else {
+                content.classList.remove('expanded');
+                toggle.textContent = '▼ 表示';
+            }
+        }
+
+        // 週次カレンダーを描画
+        function renderWeekCalendar() {
+            const content = document.getElementById('weekCalendarContent');
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - dayOfWeek);
+
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            let html = '';
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                const dateKey = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+                const dayData = monthlyData[dateKey];
+                const isToday = date.toDateString() === today.toDateString();
+
+                let classes = 'week-day';
+                if (isToday) classes += ' today';
+                if (dayData && dayData.clockIn) classes += ' has-work';
+
+                let hoursText = '';
+                if (dayData && dayData.clockIn && dayData.clockOut) {
+                    const start = new Date(dayData.clockIn);
+                    const end = new Date(dayData.clockOut);
+                    const hours = Math.floor((end - start) / 3600000);
+                    const minutes = Math.floor(((end - start) % 3600000) / 60000);
+                    hoursText = `${hours}h${minutes}m`;
+                }
+
+                html += `
+                    <div class="${classes}">
+                        <div class="week-day-name">${days[i]}</div>
+                        <div class="week-day-date">${date.getDate()}</div>
+                        ${hoursText ? `<div class="week-day-hours">${hoursText}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            content.innerHTML = html;
+        }
+
+        // 現在時刻を更新
+        function updateTime() {
+            const now = new Date();
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            const day = days[now.getDay()];
+            document.getElementById('currentDate').textContent = `${year}年${month}月${date}日（${day}）`;
+        }
+
+        // 勤務時間を更新
+        function updateWorkHours() {
+            if (!workStartTime) {
+                document.getElementById('workHours').textContent = '0:00:00';
+                document.getElementById('workProgressBar').style.width = '0%';
+                return;
+            }
+
+            const endTime = workEndTime || new Date();
+            const diff = endTime - workStartTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            document.getElementById('workHours').textContent =
+                `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // 進捗バー（8時間を100%とする）
+            const progress = Math.min((diff / (8 * 3600000)) * 100, 100);
+            document.getElementById('workProgressBar').style.width = `${progress}%`;
+        }
+
+        // トースト通知を表示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            // バイブレーション（スマートフォン）
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        // 履歴を更新
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            const history = [];
+
+            if (workStartTime) {
+                history.push({
+                    label: '出勤',
+                    time: workStartTime.toLocaleTimeString('ja-JP')
+                });
+            }
+
+            if (workEndTime) {
+                history.push({
+                    label: '退勤',
+                    time: workEndTime.toLocaleTimeString('ja-JP')
+                });
+            }
+
+            if (history.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; color: var(--text-tertiary); padding: 20px 0;">打刻履歴がありません</div>';
+            } else {
+                historyList.innerHTML = history.map(item => `
+                    <div class="history-item">
+                        <span class="history-label">${item.label}</span>
+                        <span class="history-time">${item.time}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 出勤打刻
+        function clockIn() {
+            const now = new Date();
+            workStartTime = now;
+            workEndTime = null;
+
+            const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clockInTime').textContent = timeString;
+            document.getElementById('clockOutTime').textContent = '--:--';
+
+            document.getElementById('btnClockIn').disabled = true;
+            document.getElementById('btnClockOut').disabled = false;
+
+            showToast('✓ 出勤を打刻しました');
+            updateHistory();
+
+            // リアルタイムで勤務時間を更新
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateWorkHours, 1000);
+
+            // ローカルストレージに保存
+            saveTodayData();
+        }
+
+        // 退勤打刻
+        function clockOut() {
+            const now = new Date();
+            workEndTime = now;
+
+            const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clockOutTime').textContent = timeString;
+
+            document.getElementById('btnClockOut').disabled = true;
+
+            showToast('✓ 退勤を打刻しました');
+            updateWorkHours();
+            updateHistory();
+
+            // 勤務時間の更新を停止
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+
+            // ローカルストレージに保存
+            saveTodayData();
+
+            // 週次カレンダーを更新
+            if (weekCalendarExpanded) {
+                renderWeekCalendar();
+            }
+        }
+
+        // 今日のデータを保存
+        function saveTodayData() {
+            const today = new Date();
+            const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            const data = {
+                date: dateKey,
+                clockIn: workStartTime ? workStartTime.toISOString() : null,
+                clockOut: workEndTime ? workEndTime.toISOString() : null
+            };
+
+            // 月次データを更新
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            monthlyData[dateKey] = data;
+            localStorage.setItem('monthlyData', JSON.stringify(monthlyData));
+
+            updateMonthlySummary();
+        }
+
+        // 月次サマリーを更新
+        function updateMonthlySummary() {
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            const currentMonth = new Date().getMonth() + 1;
+            const currentYear = new Date().getFullYear();
+
+            let workDays = 0;
+            let totalMinutes = 0;
+
+            Object.keys(monthlyData).forEach(dateKey => {
+                const [year, month, day] = dateKey.split('-').map(Number);
+                if (year === currentYear && month === currentMonth) {
+                    const data = monthlyData[dateKey];
+                    if (data.clockIn && data.clockOut) {
+                        workDays++;
+                        const start = new Date(data.clockIn);
+                        const end = new Date(data.clockOut);
+                        totalMinutes += (end - start) / 60000;
+                    }
+                }
+            });
+
+            document.getElementById('workDays').textContent = `${workDays}日`;
+            document.getElementById('totalHours').textContent = `${Math.floor(totalMinutes / 60)}h`;
+        }
+
+        // 今日のデータを読み込み
+        function loadTodayData() {
+            const today = new Date();
+            const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            const data = monthlyData[dateKey];
+
+            if (data) {
+                if (data.clockIn) {
+                    workStartTime = new Date(data.clockIn);
+                    const timeString = workStartTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('clockInTime').textContent = timeString;
+                    document.getElementById('btnClockIn').disabled = true;
+                }
+
+                if (data.clockOut) {
+                    workEndTime = new Date(data.clockOut);
+                    const timeString = workEndTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('clockOutTime').textContent = timeString;
+                    document.getElementById('btnClockOut').disabled = true;
+                } else if (data.clockIn) {
+                    document.getElementById('btnClockOut').disabled = false;
+                    // リアルタイムで勤務時間を更新
+                    updateInterval = setInterval(updateWorkHours, 1000);
+                }
+
+                updateWorkHours();
+                updateHistory();
+            }
+        }
+
+        // 初期化
+        loadSettings();
+        updateTime();
+        setInterval(updateTime, 1000);
+        loadTodayData();
+        updateMonthlySummary();
+    </script>
+</body>
+</html>

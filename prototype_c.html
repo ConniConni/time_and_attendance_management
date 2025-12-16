@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠打刻 - 案C（カレンダー統合型）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .current-time {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .current-date {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .today-status {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-clock-in {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-clock-in:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-clock-out {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-clock-out:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .calendar-section {
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+
+        .calendar-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .calendar {
+            background: #f7f7f7;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #999;
+            padding: 5px 0;
+        }
+
+        .weekday.sunday {
+            color: #f5576c;
+        }
+
+        .weekday.saturday {
+            color: #667eea;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            position: relative;
+        }
+
+        .day:hover {
+            background: #f0f0f0;
+        }
+
+        .day.other-month {
+            color: #ccc;
+        }
+
+        .day.today {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .day.has-work {
+            background: #e8f5e9;
+        }
+
+        .day.has-work.today {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .day-number {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .day-hours {
+            font-size: 9px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .day.today .day-hours {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .day-status {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+        }
+
+        .day-status.working {
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        .day-status.completed {
+            background: #2196f3;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .summary {
+            background: #f7f7f7;
+            border-radius: 12px;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>勤怠打刻</h1>
+        </div>
+
+        <div class="current-time" id="currentTime">--:--:--</div>
+        <div class="current-date" id="currentDate">----年--月--日（-）</div>
+
+        <div class="today-status">
+            <div class="status-item">
+                <div class="status-label">出勤</div>
+                <div class="status-value" id="clockInTime">--:--</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">勤務時間</div>
+                <div class="status-value" id="workHours">0:00</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">退勤</div>
+                <div class="status-value" id="clockOutTime">--:--</div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-clock-in" id="btnClockIn" onclick="clockIn()">
+                出勤
+            </button>
+            <button class="btn btn-clock-out" id="btnClockOut" onclick="clockOut()" disabled>
+                退勤
+            </button>
+        </div>
+
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <div class="calendar-title" id="calendarTitle">2025年1月</div>
+                <div class="calendar-nav">
+                    <button class="nav-btn" onclick="previousMonth()">◀</button>
+                    <button class="nav-btn" onclick="nextMonth()">▶</button>
+                </div>
+            </div>
+
+            <div class="calendar">
+                <div class="calendar-weekdays">
+                    <div class="weekday sunday">日</div>
+                    <div class="weekday">月</div>
+                    <div class="weekday">火</div>
+                    <div class="weekday">水</div>
+                    <div class="weekday">木</div>
+                    <div class="weekday">金</div>
+                    <div class="weekday saturday">土</div>
+                </div>
+                <div class="calendar-days" id="calendarDays"></div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">今月の勤務日数</div>
+                <div class="summary-value" id="workDays">0日</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">総勤務時間</div>
+                <div class="summary-value" id="totalHours">0h</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">平均時間</div>
+                <div class="summary-value" id="avgHours">0h</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let workStartTime = null;
+        let workEndTime = null;
+        let updateInterval = null;
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+
+        // 現在時刻を更新
+        function updateTime() {
+            const now = new Date();
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            const day = days[now.getDay()];
+            document.getElementById('currentDate').textContent = `${year}年${month}月${date}日（${day}）`;
+        }
+
+        // 勤務時間を更新
+        function updateWorkHours() {
+            if (!workStartTime) {
+                document.getElementById('workHours').textContent = '0:00';
+                return;
+            }
+
+            const endTime = workEndTime || new Date();
+            const diff = endTime - workStartTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+
+            document.getElementById('workHours').textContent =
+                `${hours}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        // トースト通知を表示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 出勤打刻
+        function clockIn() {
+            const now = new Date();
+            workStartTime = now;
+            workEndTime = null;
+
+            const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clockInTime').textContent = timeString;
+            document.getElementById('clockOutTime').textContent = '--:--';
+
+            document.getElementById('btnClockIn').disabled = true;
+            document.getElementById('btnClockOut').disabled = false;
+
+            showToast('出勤を打刻しました');
+
+            // リアルタイムで勤務時間を更新
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateWorkHours, 1000);
+
+            // ローカルストレージに保存
+            saveTodayData();
+            renderCalendar();
+        }
+
+        // 退勤打刻
+        function clockOut() {
+            const now = new Date();
+            workEndTime = now;
+
+            const timeString = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('clockOutTime').textContent = timeString;
+
+            document.getElementById('btnClockOut').disabled = true;
+
+            showToast('退勤を打刻しました');
+            updateWorkHours();
+
+            // 勤務時間の更新を停止
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+
+            // ローカルストレージに保存
+            saveTodayData();
+            renderCalendar();
+        }
+
+        // 今日のデータを保存
+        function saveTodayData() {
+            const today = new Date();
+            const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            const data = {
+                date: dateKey,
+                clockIn: workStartTime ? workStartTime.toISOString() : null,
+                clockOut: workEndTime ? workEndTime.toISOString() : null
+            };
+
+            // 月次データを更新
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            monthlyData[dateKey] = data;
+            localStorage.setItem('monthlyData', JSON.stringify(monthlyData));
+
+            updateMonthlySummary();
+        }
+
+        // カレンダーを描画
+        function renderCalendar() {
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const prevLastDay = new Date(currentYear, currentMonth, 0);
+
+            const firstDayOfWeek = firstDay.getDay();
+            const lastDate = lastDay.getDate();
+            const prevLastDate = prevLastDay.getDate();
+
+            document.getElementById('calendarTitle').textContent =
+                `${currentYear}年${currentMonth + 1}月`;
+
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            const today = new Date();
+
+            // 前月の日付
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const day = prevLastDate - i;
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day other-month';
+                dayElement.innerHTML = `<span class="day-number">${day}</span>`;
+                calendarDays.appendChild(dayElement);
+            }
+
+            // 当月の日付
+            for (let day = 1; day <= lastDate; day++) {
+                const dateKey = `${currentYear}-${currentMonth + 1}-${day}`;
+                const dayData = monthlyData[dateKey];
+                const isToday = today.getFullYear() === currentYear &&
+                               today.getMonth() === currentMonth &&
+                               today.getDate() === day;
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day';
+
+                if (isToday) {
+                    dayElement.classList.add('today');
+                }
+
+                let hoursText = '';
+                let statusClass = '';
+
+                if (dayData) {
+                    if (dayData.clockIn) {
+                        dayElement.classList.add('has-work');
+                        if (dayData.clockOut) {
+                            const start = new Date(dayData.clockIn);
+                            const end = new Date(dayData.clockOut);
+                            const hours = Math.floor((end - start) / 3600000);
+                            const minutes = Math.floor(((end - start) % 3600000) / 60000);
+                            hoursText = `${hours}h${minutes}m`;
+                            statusClass = 'completed';
+                        } else {
+                            hoursText = '勤務中';
+                            statusClass = 'working';
+                        }
+                    }
+                }
+
+                dayElement.innerHTML = `
+                    <span class="day-number">${day}</span>
+                    ${hoursText ? `<span class="day-hours">${hoursText}</span>` : ''}
+                    ${statusClass ? `<span class="day-status ${statusClass}"></span>` : ''}
+                `;
+
+                calendarDays.appendChild(dayElement);
+            }
+
+            // 次月の日付
+            const remainingDays = 42 - (firstDayOfWeek + lastDate);
+            for (let day = 1; day <= remainingDays; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day other-month';
+                dayElement.innerHTML = `<span class="day-number">${day}</span>`;
+                calendarDays.appendChild(dayElement);
+            }
+
+            updateMonthlySummary();
+        }
+
+        // 月次サマリーを更新
+        function updateMonthlySummary() {
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            let workDays = 0;
+            let totalMinutes = 0;
+
+            Object.keys(monthlyData).forEach(dateKey => {
+                const [year, month, day] = dateKey.split('-').map(Number);
+                if (year === currentYear && month === currentMonth + 1) {
+                    const data = monthlyData[dateKey];
+                    if (data.clockIn && data.clockOut) {
+                        workDays++;
+                        const start = new Date(data.clockIn);
+                        const end = new Date(data.clockOut);
+                        totalMinutes += (end - start) / 60000;
+                    }
+                }
+            });
+
+            const totalHours = Math.floor(totalMinutes / 60);
+            const avgHours = workDays > 0 ? Math.floor(totalMinutes / 60 / workDays) : 0;
+
+            document.getElementById('workDays').textContent = `${workDays}日`;
+            document.getElementById('totalHours').textContent = `${totalHours}h`;
+            document.getElementById('avgHours').textContent = `${avgHours}h`;
+        }
+
+        // 前月へ
+        function previousMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        // 次月へ
+        function nextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        // 今日のデータを読み込み
+        function loadTodayData() {
+            const today = new Date();
+            const dateKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+            const monthlyData = JSON.parse(localStorage.getItem('monthlyData') || '{}');
+            const data = monthlyData[dateKey];
+
+            if (data) {
+                if (data.clockIn) {
+                    workStartTime = new Date(data.clockIn);
+                    const timeString = workStartTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('clockInTime').textContent = timeString;
+                    document.getElementById('btnClockIn').disabled = true;
+                }
+
+                if (data.clockOut) {
+                    workEndTime = new Date(data.clockOut);
+                    const timeString = workEndTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('clockOutTime').textContent = timeString;
+                    document.getElementById('btnClockOut').disabled = true;
+                } else if (data.clockIn) {
+                    document.getElementById('btnClockOut').disabled = false;
+                    // リアルタイムで勤務時間を更新
+                    updateInterval = setInterval(updateWorkHours, 1000);
+                }
+
+                updateWorkHours();
+            }
+        }
+
+        // 初期化
+        updateTime();
+        setInterval(updateTime, 1000);
+        loadTodayData();
+        renderCalendar();
+    </script>
+</body>
+</html>
