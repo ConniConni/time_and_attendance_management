@@ -11,8 +11,8 @@ export interface WorkRecord {
  * 残業計算結果の型定義
  */
 export interface OvertimeResult {
-  normalOvertime: number; // 通常残業時間（45時間まで）
-  premiumOvertime: number; // 割増残業時間（45時間超過分）
+  normalOvertime: number; // 通常残業時間（60時間まで）
+  premiumOvertime: number; // 割増残業時間（60時間超過分）
   holidayWork: number; // 休日出勤時間
   totalOvertime: number; // 通常残業 + 割増残業
   totalHours: number; // 全体の合計
@@ -257,8 +257,8 @@ export function calculateMonthlyOvertime(
   const totalOvertimeHours = minutesToHours(totalOvertimeMinutes);
   const holidayWorkHours = minutesToHours(totalHolidayWorkMinutes);
 
-  // 45時間を境に通常残業と割増残業を分ける
-  const premiumThreshold = 45;
+  // 60時間を境に通常残業と割増残業を分ける
+  const premiumThreshold = 60;
   let normalOvertime = 0;
   let premiumOvertime = 0;
 

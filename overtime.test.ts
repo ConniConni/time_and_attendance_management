@@ -31,7 +31,7 @@ describe('残業時間計算 - 正常系', () => {
     expect(result.premiumOvertime).toBe(0);
   });
 
-  test('45時間以内の残業は通常残業のみ', () => {
+  test('60時間以内の残業は通常残業のみ', () => {
     const records: WorkRecord[] = [];
     let businessDays = 0;
     let day = 1;
@@ -61,13 +61,13 @@ describe('残業時間計算 - 正常系', () => {
     expect(result.totalOvertime).toBe(40);
   });
 
-  test('45時間超過の残業は割増計算（50時間の場合）', () => {
+  test('60時間超過の残業は割増計算（70時間の場合）', () => {
     const records: WorkRecord[] = [];
     let businessDays = 0;
     let day = 1;
 
-    // 20営業日分のデータを作成（土日を除く）
-    while (businessDays < 20) {
+    // 20営業日 × 3.5時間 = 70時間（土日を除く）
+    while (businessDays < 20 && day <= 31) {
       const dateStr = `2025-01-${String(day).padStart(2, '0')}`;
       const [year, month, dayNum] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, dayNum);
@@ -78,7 +78,7 @@ describe('残業時間計算 - 正常系', () => {
         records.push({
           date: dateStr,
           start: '09:00',
-          end: '20:30', // 2.5時間残業
+          end: '21:30', // 3.5時間残業
         });
         businessDays++;
       }
@@ -86,9 +86,9 @@ describe('残業時間計算 - 正常系', () => {
     }
 
     const result = calculateMonthlyOvertime(records);
-    expect(result.normalOvertime).toBe(45); // 最初の45時間
-    expect(result.premiumOvertime).toBe(5); // 45時間超過分
-    expect(result.totalOvertime).toBe(50); // 20営業日 × 2.5時間
+    expect(result.normalOvertime).toBe(60); // 最初の60時間
+    expect(result.premiumOvertime).toBe(10); // 60時間超過分
+    expect(result.totalOvertime).toBe(70); // 20営業日 × 3.5時間
   });
 });
 
@@ -109,13 +109,13 @@ describe('残業時間計算 - 境界値テスト', () => {
     expect(result.normalOvertime).toBe(0.25);
   });
 
-  test('45時間ちょうどは割増なし', () => {
+  test('60時間ちょうどは割増なし', () => {
     const records: WorkRecord[] = [];
     let businessDays = 0;
     let day = 1;
 
-    // 18営業日分のデータを作成（土日を除く）
-    while (businessDays < 18) {
+    // 20営業日 × 3時間 = 60時間（土日を除く）
+    while (businessDays < 20 && day <= 31) {
       const dateStr = `2025-01-${String(day).padStart(2, '0')}`;
       const [year, month, dayNum] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, dayNum);
@@ -126,7 +126,7 @@ describe('残業時間計算 - 境界値テスト', () => {
         records.push({
           date: dateStr,
           start: '09:00',
-          end: '20:30', // 2.5時間残業
+          end: '21:00', // 3時間残業
         });
         businessDays++;
       }
@@ -134,17 +134,17 @@ describe('残業時間計算 - 境界値テスト', () => {
     }
 
     const result = calculateMonthlyOvertime(records);
-    expect(result.normalOvertime).toBe(45); // 18営業日 × 2.5時間
+    expect(result.normalOvertime).toBe(60); // 20営業日 × 3時間
     expect(result.premiumOvertime).toBe(0);
   });
 
-  test('45時間を1分超過すると割増発生（15分切り上げ）', () => {
+  test('60時間を1分超過すると割増発生（15分切り上げ）', () => {
     const records: WorkRecord[] = [];
     let businessDays = 0;
     let day = 1;
 
-    // 18営業日分のデータを作成（土日を除く）
-    while (businessDays < 18) {
+    // 20営業日 × 3時間 = 60時間（土日を除く）
+    while (businessDays < 20 && day <= 31) {
       const dateStr = `2025-01-${String(day).padStart(2, '0')}`;
       const [year, month, dayNum] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, dayNum);
@@ -155,7 +155,7 @@ describe('残業時間計算 - 境界値テスト', () => {
         records.push({
           date: dateStr,
           start: '09:00',
-          end: '20:30', // 2.5時間残業
+          end: '21:00', // 3時間残業
         });
         businessDays++;
       }
@@ -181,9 +181,9 @@ describe('残業時間計算 - 境界値テスト', () => {
     }
 
     const result = calculateMonthlyOvertime(records);
-    expect(result.normalOvertime).toBe(45);
+    expect(result.normalOvertime).toBe(60);
     expect(result.premiumOvertime).toBe(0.25);
-    expect(result.totalOvertime).toBe(45.25);
+    expect(result.totalOvertime).toBe(60.25);
   });
 
   test('15分単位の切り上げ - 1分', () => {
@@ -453,8 +453,8 @@ describe('残業時間計算 - 複合シナリオ', () => {
     let businessDays = 0;
     let day = 1;
 
-    // 20営業日分のデータを作成（土日を除く）
-    while (businessDays < 20) {
+    // 20営業日 × 3.5時間 = 70時間（土日を除く）
+    while (businessDays < 20 && day <= 31) {
       const dateStr = `2025-01-${String(day).padStart(2, '0')}`;
       const [year, month, dayNum] = dateStr.split('-').map(Number);
       const date = new Date(year, month - 1, dayNum);
@@ -465,7 +465,7 @@ describe('残業時間計算 - 複合シナリオ', () => {
         records.push({
           date: dateStr,
           start: '09:00',
-          end: '20:30', // 2.5時間残業
+          end: '21:30', // 3.5時間残業
         });
         businessDays++;
       }
@@ -479,11 +479,11 @@ describe('残業時間計算 - 複合シナリオ', () => {
     );
 
     const result = calculateMonthlyOvertime(records);
-    expect(result.normalOvertime).toBe(45); // 最初の45時間
-    expect(result.premiumOvertime).toBe(5); // 45時間超過分
+    expect(result.normalOvertime).toBe(60); // 最初の60時間
+    expect(result.premiumOvertime).toBe(10); // 60時間超過分
     expect(result.holidayWork).toBe(16); // 土日 8時間 × 2日
-    expect(result.totalOvertime).toBe(50); // 20営業日 × 2.5時間
-    expect(result.totalHours).toBe(66); // 50 + 16
+    expect(result.totalOvertime).toBe(70); // 20営業日 × 3.5時間
+    expect(result.totalHours).toBe(86); // 70 + 16
   });
 
   test('日付跨ぎ + 休日出勤', () => {
@@ -495,7 +495,7 @@ describe('残業時間計算 - 複合シナリオ', () => {
     expect(result.holidayWork).toBe(3); // 23:00-26:00 = 3時間
   });
 
-  test('15分切り上げ + 45時間境界', () => {
+  test('15分切り上げ + 60時間境界', () => {
     const records: WorkRecord[] = [];
     let businessDays = 0;
     let day = 1;
@@ -521,8 +521,8 @@ describe('残業時間計算 - 複合シナリオ', () => {
 
     const result = calculateMonthlyOvertime(records);
     // 15営業日 × 4時間 = 60時間
-    expect(result.normalOvertime).toBe(45);
-    expect(result.premiumOvertime).toBe(15);
+    expect(result.normalOvertime).toBe(60);
+    expect(result.premiumOvertime).toBe(0);
   });
 
   test('1ヶ月の実際のシナリオ（2025年1月）', () => {
