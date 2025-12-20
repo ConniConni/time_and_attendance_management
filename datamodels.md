@@ -181,7 +181,7 @@ overtime_requests:
     - name: hr_id
       type: UUID
       foreign_key: users.id
-      description: 人事承認者ID（45時間超過時）
+      description: 人事承認者ID（60時間超過時）
     - name: hr_comment
       type: TEXT
     - name: hr_approved_at
@@ -1786,7 +1786,7 @@ approval_step_definitions:
       default: false
     - name: condition_expression
       type: TEXT
-      description: 条件式（例: overtime_hours > 45）
+      description: 条件式（例: overtime_hours > 60）
     - name: created_at
       type: TIMESTAMP
       not_null: true
